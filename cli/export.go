@@ -99,7 +99,7 @@ func runExport(args *docopt.Args, client *controller.Client) error {
 		}
 	}
 
-	artifact, err := client.GetArtifact(release.ImageArtifactID)
+	artifact, err := client.GetArtifact(release.ImageArtifactID())
 	if err != nil && err != controller.ErrNotFound {
 		return fmt.Errorf("error retrieving artifact: %s", err)
 	} else if err == nil {
@@ -230,7 +230,7 @@ func runImport(args *docopt.Args, client *controller.Client) error {
 				return fmt.Errorf("error decoding release: %s", err)
 			}
 			release.ID = ""
-			release.ImageArtifactID = ""
+			release.ArtifactIDs = nil
 		case "artifact.json":
 			artifact = &ct.Artifact{}
 			if err := json.NewDecoder(tr).Decode(artifact); err != nil {
@@ -378,7 +378,7 @@ func runImport(args *docopt.Args, client *controller.Client) error {
 		if err := client.CreateArtifact(artifact); err != nil {
 			return fmt.Errorf("error creating artifact: %s", err)
 		}
-		release.ImageArtifactID = artifact.ID
+		release.ArtifactIDs = []string{artifact.ID}
 	}
 
 	if release != nil {
