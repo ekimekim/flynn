@@ -41,6 +41,21 @@ var Providers = Store.createClass({
 			});
 			break;
 
+		case 'APP_PROVISION_RESOURCES':
+			this.setState({
+				newResourceStates: extend({}, this.state.newResourceStates, (function () {
+					var s = {};
+					event.providerIDs.forEach(function (providerID) {
+						s[providerID] = {
+							isCreating: true,
+							errMsg: null
+						};
+					});
+					return s;
+				})())
+			});
+			break;
+
 		case 'PROVISION_RESOURCE_FAILED':
 			this.setState({
 				newResourceStates: extend({}, this.state.newResourceStates, (function () {
@@ -73,9 +88,6 @@ var Providers = Store.createClass({
 	},
 
 	__handleResourceEvent: function (event) {
-		if (event.app) {
-			return;
-		}
 		var provider = null;
 		var providers = this.state.providers;
 		for (var i = 0, len = providers.length; i < len; i++) {
@@ -84,18 +96,13 @@ var Providers = Store.createClass({
 				break;
 			}
 		}
-		if (provider === null) {
+		if (provider === null || !this.state.newResourceStates.hasOwnProperty(provider.id)) {
 			return;
 		}
+		var newResourceStates = extend({}, this.state.newResourceStates);
+		delete newResourceStates[provider.id];
 		this.setState({
-			newResourceStates: extend({}, this.state.newResourceStates, (function () {
-				var s = {};
-				s[provider.id] = {
-					isCreating: false,
-					errMsg: null
-				};
-				return s;
-			})())
+			newResourceStates: newResourceStates
 		});
 	},
 
@@ -126,10 +133,13 @@ var Providers = Store.createClass({
 	},
 
 	__handleResourceDeletedEvent: function (event) {
+		if ( !this.state.deletingResourceStates.hasOwnProperty(event.object_id) ) {
+			return;
+		}
 		this.setState({
 			deletingResourceStates: extend({}, this.state.deletingResourceStates, (function () {
 				var s = {};
-				s[event.resourceID] = {
+				s[event.object_id] = {
 					isDeleting: false,
 					errMsg: null
 				};

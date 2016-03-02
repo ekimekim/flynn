@@ -11,6 +11,7 @@ var Provisioner = React.createClass({
 	render: function () {
 		var providers = this.state.providers;
 		var providerSelection = this.state.providerSelection;
+		var disabledProviderIDs = this.props.disabledProviderIDs || [];
 
 		return (
 			<ul className="provider-picker">
@@ -22,7 +23,7 @@ var Provisioner = React.createClass({
 					return (
 						<li
 							key={provider.id}
-							className={'panel'+ (providerSelection[provider.id] === true ? ' selected' : '')}
+							className={'panel'+ (providerSelection[provider.id] === true ? ' selected' : '') + (disabledProviderIDs.indexOf(provider.id) !== -1 ? ' disabled' : '')}
 							onClick={this.__handleProviderClick.bind(this, provider.id)}>
 							<img src={attrs.img} />
 							<h3>{attrs.title}</h3>
@@ -47,6 +48,9 @@ var Provisioner = React.createClass({
 
 	__handleProviderClick: function (providerID, e) {
 		e.preventDefault();
+		if ((this.props.disabledProviderIDs || []).indexOf(providerID) !== -1) {
+			return;
+		}
 		var providerSelection = this.state.providerSelection || {};
 		if (providerSelection[providerID]) {
 			providerSelection[providerID] = false;

@@ -1,6 +1,6 @@
 import { assertEqual } from 'marbles/utils';
 import Config from 'dashboard/config';
-import AppResourcesStore from '../stores/app-resources';
+import AppResourcesStore from 'dashboard/stores/app-resources';
 import ProvidersStore from 'dashboard/stores/providers';
 import RouteLink from 'dashboard/views/route-link';
 
@@ -27,7 +27,7 @@ function getState (props) {
 	providersState.providers.forEach(function (provider) {
 		providersByID[provider.id] = provider;
 	});
-	state.providersByID = providersState.fetched ? providersByID : null;
+	state.providersByID = providersByID;
 
 	return state;
 }
@@ -36,6 +36,7 @@ var AppResources = React.createClass({
 	displayName: "Views.AppResources",
 
 	render: function () {
+		var getAppPath = this.props.getAppPath;
 		var providersByID = this.state.providersByID;
 
 		return (
@@ -45,7 +46,7 @@ var AppResources = React.createClass({
 				</header>
 
 				{(this.state.resources.length === 0 && this.state.resourcesFetched) ? (
-					<span>(none)</span>
+					<div>(none)</div>
 				) : (
 					<ul>
 						{this.state.resources.map(function (resource) {
@@ -53,27 +54,20 @@ var AppResources = React.createClass({
 							var pAttrs = providerAttrs[provider.name];
 							return (
 								<li key={resource.id}>
-									<RouteLink path={'/providers/'+ resource.provider +'/resources/'+ resource.id} style={{
-										display: 'table'
-									}}>
-										<img
-											src={pAttrs.img}
-											style={{
-												height: '1rem',
-												display: 'table-cell',
-												verticalAlign: 'middle'
-											}} />
-										<span style={{
-											display: 'table-cell',
-											verticalAlign: 'middle',
-											paddingLeft: '0.5rem'
-										}}>{pAttrs.title}</span>
+									<RouteLink className="resource-link" path={'/providers/'+ resource.provider +'/resources/'+ resource.id}>
+										<img src={pAttrs.img} />
+										<span>{pAttrs.title}</span>
+									</RouteLink>
+									<RouteLink className="delete-resource-link" style={{float: 'right'}} path={getAppPath("/providers/:providerID/resources/:resourceID/delete", {providerID: resource.provider, resourceID: resource.id})}>
+										<i className="icn-trash" />
 									</RouteLink>
 								</li>
 							);
 						}, this)}
 					</ul>
 				)}
+
+				<RouteLink path={'/apps/'+ this.props.appId +'/resources/new'} className="btn-green" style={{marginTop: '2rem'}}>Provision database</RouteLink>
 			</section>
 		);
 	},

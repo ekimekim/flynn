@@ -434,6 +434,24 @@ var Client = createClass({
 		});
 	},
 
+	getResource: function (providerID, resourceID) {
+		return this.performControllerRequest('GET', {
+			url: '/providers/'+ encodeURIComponent(providerID) +'/resources/'+ encodeURIComponent(resourceID)
+		});
+	},
+
+	addResourceApp: function (providerID, resourceID, appID) {
+		return this.performControllerRequest('PUT', {
+			url: '/providers/'+ encodeURIComponent(providerID) +'/resources/'+ encodeURIComponent(resourceID) +'/apps/'+ encodeURIComponent(appID)
+		});
+	},
+
+	deleteResourceApp: function (providerID, resourceID, appID) {
+		return this.performControllerRequest('DELETE', {
+			url: '/providers/'+ encodeURIComponent(providerID) +'/resources/'+ encodeURIComponent(resourceID) +'/apps/'+ encodeURIComponent(appID)
+		});
+	},
+
 	provisionResource: function (providerID, resourceReq) {
 		resourceReq = resourceReq || {};
 		resourceReq.config = resourceReq.config || {};

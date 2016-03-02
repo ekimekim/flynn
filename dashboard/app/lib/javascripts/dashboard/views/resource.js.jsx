@@ -1,8 +1,13 @@
+import { extend } from 'marbles/utils';
 import Config from 'dashboard/config';
+import Dispatcher from 'dashboard/dispatcher';
 import AppsStore from 'dashboard/stores/apps';
+import AppStore from 'dashboard/stores/app';
 import AppRoutesStore from 'dashboard/stores/app-routes';
 import RouteLink from 'dashboard/views/route-link';
 import EditEnv from 'dashboard/views/edit-env';
+
+var isSystemApp = AppStore.isSystemApp;
 
 var appsStoreID = null;
 var appRoutesStoreID = function (props) {
@@ -20,6 +25,7 @@ var Resource = React.createClass({
 		var appsByID = this.state.appsByID;
 		var showAdvanced = this.state.showAdvanced;
 		var hasExternalRoute = this.state.hasExternalRoute;
+		var isAddingApp = this.state.isAddingApp;
 
 		if ( !appsByID ) {
 			return <div />;
@@ -28,8 +34,14 @@ var Resource = React.createClass({
 		var provider = this.props.provider;
 		var resource = this.props.resource;
 		var pAttrs = providerAttrs[provider.name];
-		var appNames = (resource.apps || []).map(function (appID) {
+		var apps = resource.apps || [];
+		var appNames = apps.map(function (appID) {
 			return appsByID[appID].name;
+		});
+		var allOtherApps = this.state.apps.filter(function (app) {
+			return !resource.apps.find(function (appID) {
+				return appID === app.id;
+			});
 		});
 		return (
 			<section className='resource'>
@@ -43,6 +55,7 @@ var Resource = React.createClass({
 				</header>
 
 				<section style={{
+					display: apps.length ? 'none' : 'block',
 					visibility: hasExternalRoute === null ? 'hidden' : 'visible'
 				}}>
 					{hasExternalRoute ? (
@@ -65,11 +78,11 @@ var Resource = React.createClass({
 						}} />
 				</section>
 
-				{(resource.apps || []).length ? (
+				{apps.length ? (
 					<section className='resource-apps'>
 						<h2>Apps</h2>
 						<ul>
-							{resource.apps.map(function (appID) {
+							{apps.map(function (appID) {
 								return (
 									<li key={appID}>
 										<RouteLink path={'/apps/'+ appID}>{appsByID[appID].name}</RouteLink>
@@ -77,6 +90,25 @@ var Resource = React.createClass({
 								);
 							}, this)}
 						</ul>
+
+						<section className="resource-add-app" style={{ marginTop: '1rem' }}>
+							<select onChange={this.__handleAddAppIDChange} value={this.state.addAppID}>
+								<option></option>
+								{allOtherApps.map(function (app) {
+									return (
+										<option key={app.id} value={app.id}>{app.name}</option>
+									);
+								})}
+							</select>
+
+							<br/>
+
+							<button
+								className="btn-green"
+								disabled={isAddingApp || !this.state.addAppID}
+								onClick={this.__handleAddAppBtnClick}
+								style={{marginTop: '1rem' }}>{isAddingApp ? 'Please wait...' : 'Add application'}</button>
+						</section>
 					</section>
 				) : null}
 			</section>
@@ -104,13 +136,37 @@ var Resource = React.createClass({
 
 	__toggleShowAdvanced: function (e) {
 		e.preventDefault();
-		this.setState(this.__getState(this.props, this.state, !this.state.showAdvanced));
+		this.setState(this.__getState(this.props, this.state, {showAdvanced: !this.state.showAdvanced}));
 	},
 
-	__getState: function (props, prevState, showAdvanced) {
-		var state = {
-			showAdvanced: showAdvanced === undefined ? prevState.showAdvanced || false : showAdvanced
-		};
+	__handleAddAppIDChange: function (e) {
+		var appID = e.target.value;
+		this.setState(this.__getState(this.props, this.state, {addAppID: appID}));
+	},
+
+	__handleAddAppBtnClick: function (e) {
+		e.preventDefault();
+		this.setState(this.__getState(this.props, this.state, {isAddingApp: true}));
+		Dispatcher.dispatch({
+			name: 'RESOURCE_ADD_APP',
+			appID: this.state.addAppID,
+			providerID: this.props.provider.id,
+			resourceID: this.props.resource.id
+		});
+	},
+
+	__getState: function (props, prevState, newState) {
+		var state = extend({
+			showAdvanced: false,
+			addAppID: null,
+			isAddingApp: false
+		}, prevState, newState || {});
+
+		// check to see if app ID has been added to resource
+		if ((props.resource.apps || []).find(function (appID) { return appID === state.addAppID; })) {
+			state.addAppID = null;
+			state.isAddingApp = false;
+		}
 
 		var appsState = AppsStore.getState(appsStoreID);
 		var appsByID = {};
@@ -118,6 +174,9 @@ var Resource = React.createClass({
 			appsByID[app.id] = app;
 		});
 		state.appsByID = appsState.fetched ? appsByID : null;
+		state.apps = appsState.apps.filter(function (app) {
+			return !isSystemApp(app);
+		});
 
 		var appRoutesState = AppRoutesStore.getState(appRoutesStoreID(props));
 		var routes = appRoutesState.fetched ? appRoutesState.routes : null;
