@@ -22,25 +22,42 @@ func Run(client *controller.Client, out io.Writer) error {
 		return err
 	}
 
-	newJob := &ct.NewJob{
-		ReleaseID:  data["postgres"].Release.ID,
+	fmt.Println("getting postgres release")
+	pgRelease := data["postgres"].Release
+	pgJob := &ct.NewJob{
+		ReleaseID:  pgRelease.ID,
 		Entrypoint: []string{"sh"},
 		Cmd:        []string{"-c", "pg_dumpall --clean --if-exists | gzip -9"},
 		Env: map[string]string{
-			"PGHOST":     "leader.postgres.discoverd",
-			"PGUSER":     "flynn",
-			"PGPASSWORD": data["postgres"].Release.Env["PGPASSWORD"],
+			"PGHOST":     pgRelease.Env["PGHOST"],
+			"PGUSER":     pgRelease.Env["PGUSER"],
+			"PGPASSWORD": pgRelease.Env["PGPASSWORD"],
 		},
 		DisableLog: true,
 	}
-	if err := tw.WriteCommandOutput(client, "postgres.sql.gz", "postgres", newJob); err != nil {
+	if err := tw.WriteCommandOutput(client, "postgres.sql.gz", "postgres", pgJob); err != nil {
+		return fmt.Errorf("error dumping database: %s", err)
+	}
+
+	fmt.Println("getting mysql release")
+	mysqlRelease := data["mariadb"].Release
+	mysqlJob := &ct.NewJob{
+		ReleaseID:  mysqlRelease.ID,
+		Entrypoint: []string{"sh"},
+		Cmd:        []string{"-c", fmt.Sprintf("/usr/bin/mysqldump -h %s -u %s --all-databases | gzip -9", mysqlRelease.Env["MYSQL_HOST"], mysqlRelease.Env["MYSQL_USER"])},
+		Env: map[string]string{
+			"MYSQL_PWD": mysqlRelease.Env["MYSQL_PWD"],
+		},
+		DisableLog: true,
+	}
+	if err := tw.WriteCommandOutput(client, "mysql.sql.gz", "mariadb", mysqlJob); err != nil {
 		return fmt.Errorf("error dumping database: %s", err)
 	}
 	return nil
 }
 
 func getApps(client *controller.Client) (map[string]*ct.ExpandedFormation, error) {
-	appNames := []string{"postgres", "discoverd", "flannel", "controller"}
+	appNames := []string{"postgres", "mariadb", "discoverd", "flannel", "controller"}
 	data := make(map[string]*ct.ExpandedFormation, len(appNames))
 	for _, name := range appNames {
 		app, err := client.GetApp(name)
