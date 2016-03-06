@@ -111,7 +111,7 @@ main() {
     )
   fi
   info "installing runtime dependencies"
-  run apt-get install --yes ${packages[@]}
+  run apt-get install --yes "${packages[@]}"
   info "loading zfs kernel module"
   run modprobe zfs
 
@@ -216,7 +216,7 @@ do_remove() {
 check_installed() {
   local missing=()
 
-  for bin in $@; do
+  for bin in "$@"; do
     if ! which "${bin}" &>/dev/null; then
       missing+=("${bin}")
     fi
@@ -228,13 +228,13 @@ check_installed() {
 }
 
 run() {
-  local cmd=$@
-  info "running \"${cmd}\""
-  $cmd
+  local cmd=("$@")
+  info "running \"${cmd[@]}\""
+  "${cmd[@]}"
 
   local status=$?
   if [[ $status -ne 0 ]]; then
-    fail "failed to run \"${cmd}\", exit status ${status}"
+    fail "failed to run \"${cmd[@]}\", exit status ${status}"
   fi
 }
 
@@ -258,4 +258,4 @@ fail() {
   exit 1
 }
 
-main $@
+main "$@"
